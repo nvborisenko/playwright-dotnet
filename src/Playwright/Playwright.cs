@@ -41,25 +41,63 @@ public static class Playwright
     {
         var transport = new StdIOTransport();
         var connection = new Connection();
-        transport.MessageReceived += (_, message) =>
+        var broker = new Broker(transport, connection);
+        connection.Broker = broker;
+
+        return await connection.InitializePlaywrightAsync().ConfigureAwait(false);
+    }
+
+    internal class Broker : IDisposable
+    {
+        private readonly StdIOTransport _transport;
+        private readonly Connection _connection;
+
+        public Broker(StdIOTransport transport, Connection connection)
         {
-            Connection.TraceMessage("pw:channel:recv", message);
-            connection.Dispatch(JsonSerializer.Deserialize<PlaywrightServerMessage>(message, JsonExtensions.DefaultJsonSerializerOptions)!);
-        };
-        transport.LogReceived += (_, log) =>
+            _transport = transport;
+            _connection = connection;
+
+            _transport.MessageReceived += _transport_MessageReceived;
+            _transport.LogReceived += _transport_LogReceived;
+            _transport.TransportClosed += _transport_TransportClosed;
+            _connection.OnMessage = (message, keepNulls) =>
+            {
+                var rawMessage = JsonSerializer.SerializeToUtf8Bytes(message, keepNulls ? _connection.DefaultJsonSerializerOptionsKeepNulls : _connection.DefaultJsonSerializerOptions);
+                Connection.TraceMessage("pw:channel:send", rawMessage);
+                return _transport.SendAsync(rawMessage);
+            };
+            _connection.Close += _connection_Close;
+        }
+
+        private void _connection_Close(object sender, Exception reason)
+        {
+            _transport.Close(reason);
+        }
+
+        private void _transport_TransportClosed(object sender, Exception reason)
+        {
+            _connection.DoClose(reason);
+        }
+
+        private void _transport_LogReceived(object sender, string log)
         {
             // workaround for https://github.com/nunit/nunit/issues/4144
             var writer = Environment.GetEnvironmentVariable("PWAPI_TO_STDOUT") != null ? Console.Out : Console.Error;
             writer.WriteLine(log);
-        };
-        transport.TransportClosed += (_, reason) => connection.DoClose(reason);
-        connection.OnMessage = (message, keepNulls) =>
+        }
+
+        private void _transport_MessageReceived(object sender, byte[] message)
         {
-            var rawMessage = JsonSerializer.SerializeToUtf8Bytes(message, keepNulls ? connection.DefaultJsonSerializerOptionsKeepNulls : connection.DefaultJsonSerializerOptions);
-            Connection.TraceMessage("pw:channel:send", rawMessage);
-            return transport.SendAsync(rawMessage);
-        };
-        connection.Close += (_, reason) => transport.Close(reason);
-        return await connection.InitializePlaywrightAsync().ConfigureAwait(false);
+            Connection.TraceMessage("pw:channel:recv", message);
+            _connection.Dispatch(JsonSerializer.Deserialize<PlaywrightServerMessage>(message, JsonExtensions.DefaultJsonSerializerOptions)!);
+        }
+
+        public void Dispose()
+        {
+            _transport.MessageReceived -= _transport_MessageReceived;
+            _connection.Close -= _connection_Close;
+            _transport.TransportClosed -= _transport_TransportClosed;
+            _transport.LogReceived -= _transport_LogReceived;
+        }
     }
 }

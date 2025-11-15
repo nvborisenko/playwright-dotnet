@@ -88,6 +88,8 @@ internal class Connection : IDisposable
 
     internal JsonSerializerOptions DefaultJsonSerializerOptionsKeepNulls { get; }
 
+    internal Playwright.Broker Broker { get; set; } = null!;
+
     internal static string FormatCallLog(string[]? log)
     {
         if (log == null)
@@ -323,7 +325,7 @@ internal class Connection : IDisposable
                 result = new BindingCall(parent, guid, initializer?.ToObject<BindingCallInitializer>(DefaultJsonSerializerOptions)!);
                 break;
             case ChannelOwnerType.Playwright:
-                result = new PlaywrightImpl(parent, guid, initializer?.ToObject<PlaywrightInitializer>(DefaultJsonSerializerOptions)!);
+                result = new PlaywrightImpl(Broker, parent, guid, initializer?.ToObject<PlaywrightInitializer>(DefaultJsonSerializerOptions)!);
                 break;
             case ChannelOwnerType.Browser:
                 var browserInitializer = initializer?.ToObject<BrowserInitializer>(DefaultJsonSerializerOptions)!;
@@ -452,9 +454,9 @@ internal class Connection : IDisposable
         {
             return;
         }
-
         _queue.Dispose();
         Close?.Invoke(this, new TargetClosedException("Connection disposed"));
+        Broker.Dispose();
     }
 
     internal static void TraceMessage(string logLevel, byte[] rawMessage)

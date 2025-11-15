@@ -38,7 +38,7 @@ internal class PlaywrightImpl : ChannelOwner, IPlaywright
 
     private readonly Dictionary<string, BrowserNewContextOptions> _devices = new(StringComparer.InvariantCultureIgnoreCase);
 
-    internal PlaywrightImpl(ChannelOwner parent, string guid, PlaywrightInitializer initializer)
+    internal PlaywrightImpl(Playwright.Broker broker, ChannelOwner parent, string guid, PlaywrightInitializer initializer)
          : base(parent, guid)
     {
         _initializer = initializer;
