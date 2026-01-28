@@ -42,7 +42,8 @@ namespace Microsoft.Playwright.Core;
 
 internal class Frame : ChannelOwner, IFrame
 {
-    private readonly List<WaitUntilState> _loadStates = new();
+    private readonly HashSet<WaitUntilState> _loadStates = new();
+    private readonly object _loadStatesLock = new();
     internal readonly List<Frame> _childFrames = new();
 
     internal Frame(ChannelOwner parent, string guid, FrameInitializer initializer) : base(parent, guid)
@@ -50,7 +51,10 @@ internal class Frame : ChannelOwner, IFrame
         Url = initializer.Url;
         Name = initializer.Name;
         ParentFrame = initializer.ParentFrame;
-        _loadStates = initializer.LoadStates;
+        foreach (var state in initializer.LoadStates)
+        {
+            _loadStates.Add(state);
+        }
     }
 
     /// <summary>
@@ -111,13 +115,19 @@ internal class Frame : ChannelOwner, IFrame
     {
         if (add.HasValue)
         {
-            _loadStates.Add(add.Value);
+            lock (_loadStatesLock)
+            {
+                _loadStates.Add(add.Value);
+            }
             LoadState?.Invoke(this, add.Value);
         }
 
         if (remove.HasValue)
         {
-            _loadStates.Remove(remove.Value);
+            lock (_loadStatesLock)
+            {
+                _loadStates.Remove(remove.Value);
+            }
         }
         if (this.ParentFrame == null && add == WaitUntilState.Load && this.Page != null)
         {
@@ -238,7 +248,12 @@ internal class Frame : ChannelOwner, IFrame
         {
             waiter = SetupNavigationWaiter("frame.WaitForLoadStateAsync", options?.Timeout);
 
-            if (_loadStates.Contains(loadState))
+            bool hasLoadState;
+            lock (_loadStatesLock)
+            {
+                hasLoadState = _loadStates.Contains(loadState);
+            }
+            if (hasLoadState)
             {
                 waiter.Log($"  not waiting, \"{state}\" event already fired");
             }
@@ -326,7 +341,12 @@ internal class Frame : ChannelOwner, IFrame
             await waiter.WaitForPromiseAsync(Task.FromException<object>(ex)).ConfigureAwait(false);
         }
 
-        if (!_loadStates.ToArray().Select(s => s.ToValueString()).Contains(waitUntil.Value.ToValueString()))
+        bool hasWaitUntilState;
+        lock (_loadStatesLock)
+        {
+            hasWaitUntilState = _loadStates.Any(s => s.ToValueString() == waitUntil.Value.ToValueString());
+        }
+        if (!hasWaitUntilState)
         {
             await waiter.WaitForEventAsync<WaitUntilState>(
                 this,
