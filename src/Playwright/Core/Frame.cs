@@ -341,25 +341,36 @@ internal class Frame : ChannelOwner, IFrame
             await waiter.WaitForPromiseAsync(Task.FromException<object>(ex)).ConfigureAwait(false);
         }
 
+        // Use GetWaitForEventTask to set up the subscription first
+        var (loadStateTask, loadStateDispose) = waiter.GetWaitForEventTask<WaitUntilState>(
+            this,
+            "LoadState",
+            e =>
+            {
+                waiter.Log($"  \"{e}\" event fired");
+                return e.ToValueString() == waitUntil.Value.ToValueString();
+            });
+
+        // Now check if the state is already present (double-checked locking pattern)
         bool hasWaitUntilState;
         lock (_loadStatesLock)
         {
             hasWaitUntilState = _loadStates.Any(s => s.ToValueString() == waitUntil.Value.ToValueString());
         }
-        if (!hasWaitUntilState)
+
+        if (hasWaitUntilState)
         {
-            await waiter.WaitForEventAsync<WaitUntilState>(
-                this,
-                "LoadState",
-                e =>
-                {
-                    waiter.Log($"  \"{e}\" event fired");
-                    return e.ToValueString() == waitUntil.Value.ToValueString();
-                }).ConfigureAwait(false);
+            // State is already present, no need to wait
+            waiter.Log($"  \"{waitUntil}\" event was already fired");
+            loadStateDispose();
+        }
+        else
+        {
+            // Wait for the event
+            await waiter.WaitForPromiseAsync(loadStateTask, loadStateDispose).ConfigureAwait(false);
         }
 
         var request = navigatedEvent.NewDocument?.Request;
-
         return request != null
             ? await waiter.WaitForPromiseAsync(request.FinalRequest.ResponseAsync()).ConfigureAwait(false)
             : null;
