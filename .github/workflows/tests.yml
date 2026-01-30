@@ -39,6 +39,7 @@ jobs:
         if: matrix.os != 'ubuntu-latest'
         env:
           BROWSER: ${{ matrix.browser }}
+          DEBUG: pw:api
         run: dotnet test ./src/Playwright.Tests/Playwright.Tests.csproj -c Debug -f net8.0 --logger:"console;verbosity=detailed"
       - name: Running tests (Linux)
         if: matrix.os == 'ubuntu-latest'
