@@ -190,12 +190,6 @@ public class BrowserContextHarTests : ContextTestEx
         await page.CloseAsync();
     }
 
-    [PlaywrightTest]
-    public async Task AAA()
-    {
-        await Task.Delay(40_000);
-    }
-
     [PlaywrightTest("browsercontext-har.spec.ts", "should change document URL after redirected navigation")]
     public async Task ShouldChangeDocumentUrlAfterRedirectedNavigation()
     {
