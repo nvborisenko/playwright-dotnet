@@ -1,10 +1,11 @@
 name: Tests
- 
+
 on:
   push:
     branches:
       - main
       - release-*
+      - reverting
   pull_request:
     branches:
       - main
