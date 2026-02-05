@@ -42,9 +42,9 @@ jobs:
         if: matrix.os != 'ubuntu-latest'
         env:
           BROWSER: ${{ matrix.browser }}
-        run: dotnet test ./src/Playwright.Tests/Playwright.Tests.csproj -c Debug -f net8.0 --verbosity quiet
+        run: dotnet test ./src/Playwright.Tests/Playwright.Tests.csproj -c Debug -f net8.0 --verbosity quiet --logger:"console;consoleLoggerParameters=ErrorsOnly"
       - name: Running tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
           BROWSER: ${{ matrix.browser }}
-        run: xvfb-run dotnet test ./src/Playwright.Tests/Playwright.Tests.csproj -c Debug -f net8.0 --verbosity quiet
+        run: xvfb-run dotnet test ./src/Playwright.Tests/Playwright.Tests.csproj -c Debug -f net8.0 --verbosity quiet --logger:"console;consoleLoggerParameters=ErrorsOnly"
