@@ -88,6 +88,9 @@ internal class StdIOTransport : IDisposable
 
     public async Task SendAsync(byte[] message)
     {
+        var line = Encoding.UTF8.GetString(message);
+        await Console.Out.WriteLineAsync($"--> {line}").ConfigureAwait(false);
+
         try
         {
             if (!_readerCancellationSource.IsCancellationRequested)
@@ -255,6 +258,15 @@ internal class StdIOTransport : IDisposable
                 _data.CopyTo(offset, result, 0, result.Length);
                 offset += result.Length;
                 _currentMessageSize = null;
+                try
+                {
+                    var line = UTF8Encoding.UTF8.GetString(result);
+                    Console.Out.WriteLine($"<-- {line}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Out.WriteLine($"^^ {ex}");
+                }
                 MessageReceived?.Invoke(this, result);
             }
         }

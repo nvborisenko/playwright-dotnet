@@ -43,7 +43,7 @@ public static class Playwright
         var connection = new Connection();
         transport.MessageReceived += (_, message) =>
         {
-            Connection.TraceMessage("pw:channel:recv", message);
+            // Connection.TraceMessage("pw:channel:recv", message);
             connection.Dispatch(JsonSerializer.Deserialize<PlaywrightServerMessage>(message, JsonExtensions.DefaultJsonSerializerOptions)!);
         };
         transport.LogReceived += (_, log) =>

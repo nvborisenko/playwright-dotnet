@@ -459,19 +459,19 @@ internal class Connection : IDisposable
 
     internal static void TraceMessage(string logLevel, byte[] rawMessage)
     {
-        string actualLogLevel = Environment.GetEnvironmentVariable("DEBUG");
-        if (string.IsNullOrEmpty(actualLogLevel))
-        {
-            return;
-        }
-        if (!actualLogLevel.Contains(logLevel))
-        {
-            return;
-        }
-        var message = UTF8Encoding.UTF8.GetString(rawMessage);
-        string line = $"{logLevel}: {message}";
+        // string actualLogLevel = Environment.GetEnvironmentVariable("DEBUG");
+        // if (string.IsNullOrEmpty(actualLogLevel))
+        // {
+        //     return;
+        // }
+        // if (!actualLogLevel.Contains(logLevel))
+        // {
+        //     return;
+        // }
+        // var message = UTF8Encoding.UTF8.GetString(rawMessage);
+        // string line = $"{logLevel}: {message}";
         // Trace.WriteLine(line);
-        Console.Out.WriteLine(line);
+        // Console.Out.WriteLine(line);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
