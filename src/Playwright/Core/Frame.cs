@@ -42,7 +42,7 @@ namespace Microsoft.Playwright.Core;
 
 internal class Frame : ChannelOwner, IFrame
 {
-    private readonly HashSet<WaitUntilState> _loadStates = new();
+    private readonly List<WaitUntilState> _loadStates = new();
     private readonly object _loadStatesLock = new();
     internal readonly List<Frame> _childFrames = new();
 
@@ -52,10 +52,7 @@ internal class Frame : ChannelOwner, IFrame
         Name = initializer.Name;
         ParentFrame = initializer.ParentFrame;
 
-        foreach (var state in initializer.LoadStates)
-        {
-            _loadStates.Add(state);
-        }
+        _loadStates.AddRange(initializer.LoadStates);
     }
 
     /// <summary>
