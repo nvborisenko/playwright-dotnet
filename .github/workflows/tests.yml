@@ -16,7 +16,7 @@ on:
 jobs:
   test:
     env:
-      DEBUG: yes
+      DEBUG: pw:channel:send pw:channel:recv
     name: ${{ matrix.browser }}/${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
