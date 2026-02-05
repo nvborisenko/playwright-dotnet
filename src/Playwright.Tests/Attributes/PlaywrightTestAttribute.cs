@@ -37,7 +37,7 @@ namespace Microsoft.Playwright.Tests;
 /// Enables decorating test facts with information about the corresponding test in the upstream repository.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-public class PlaywrightTestAttribute : TestAttribute, IWrapSetUpTearDown
+public class PlaywrightTestAttribute : TestAttribute
 {
     private readonly int? _timeout;
 
@@ -89,10 +89,10 @@ public class PlaywrightTestAttribute : TestAttribute, IWrapSetUpTearDown
     public TestCommand Wrap(TestCommand command)
     {
         command = new TimeoutCommand(command, _timeout ?? TestConstants.DefaultTestTimeout);
-        if (Environment.GetEnvironmentVariable("CI") != null)
-        {
-            command = new RetryCommand(command, 3);
-        }
+        //if (Environment.GetEnvironmentVariable("CI") != null)
+        //{
+        //    command = new RetryCommand(command, 3);
+        //}
         return new UnobservedTaskExceptionCommand(command);
     }
 
