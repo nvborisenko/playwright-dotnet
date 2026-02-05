@@ -470,7 +470,7 @@ internal class Connection : IDisposable
         }
         var message = UTF8Encoding.UTF8.GetString(rawMessage);
         string line = $"{logLevel}: {message}";
-        Trace.WriteLine(line);
+        // Trace.WriteLine(line);
         Console.Error.WriteLine(line);
     }
 
