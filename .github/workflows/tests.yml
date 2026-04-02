@@ -3,6 +3,7 @@ name: Tests
 on:
   push:
     branches:
+      - reverting
       - main
       - release-*
   pull_request:
