@@ -43,7 +43,6 @@ namespace Microsoft.Playwright.Core;
 internal class Frame : ChannelOwner, IFrame
 {
     private readonly List<WaitUntilState> _loadStates = new();
-    private readonly object _loadStatesLock = new();
     internal readonly List<Frame> _childFrames = new();
 
     internal Frame(ChannelOwner parent, string guid, FrameInitializer initializer) : base(parent, guid)
@@ -112,19 +111,13 @@ internal class Frame : ChannelOwner, IFrame
     {
         if (add.HasValue)
         {
-            lock (_loadStatesLock)
-            {
-                _loadStates.Add(add.Value);
-            }
+            _loadStates.Add(add.Value);
             LoadState?.Invoke(this, add.Value);
         }
 
         if (remove.HasValue)
         {
-            lock (_loadStatesLock)
-            {
-                _loadStates.Remove(remove.Value);
-            }
+            _loadStates.Remove(remove.Value);
         }
         if (this.ParentFrame == null && add == WaitUntilState.Load && this.Page != null)
         {
@@ -245,13 +238,7 @@ internal class Frame : ChannelOwner, IFrame
         {
             waiter = SetupNavigationWaiter("frame.WaitForLoadStateAsync", options?.Timeout);
 
-            bool containsLoadState;
-            lock (_loadStatesLock)
-            {
-                containsLoadState = _loadStates.Contains(loadState);
-            }
-
-            if (containsLoadState)
+            if (_loadStates.Contains(loadState))
             {
                 waiter.Log($"  not waiting, \"{state}\" event already fired");
             }
@@ -339,32 +326,16 @@ internal class Frame : ChannelOwner, IFrame
             await waiter.WaitForPromiseAsync(Task.FromException<object>(ex)).ConfigureAwait(false);
         }
 
-        // Set the subscription first
-        var (loadStateTask, loadStateDispose) = waiter.GetWaitForEventTask<WaitUntilState>(
-            this,
-            "LoadState",
-            e =>
-            {
-                waiter.Log($"  \"{e}\" event fired");
-                return e.ToValueString() == waitUntil.Value.ToValueString();
-            });
-
-        bool containsWaitUntilState;
-        lock (_loadStatesLock)
+        if (!_loadStates.Select(s => s.ToValueString()).Contains(waitUntil.Value.ToValueString()))
         {
-            containsWaitUntilState = _loadStates.Any(s => s.ToValueString() == waitUntil.Value.ToValueString());
-        }
-
-        if (containsWaitUntilState)
-        {
-            // State is already present, no need to wait
-            waiter.Log($"  \"{waitUntil}\" event was already fired");
-            loadStateDispose();
-        }
-        else
-        {
-            // Wait for the event
-            await waiter.WaitForPromiseAsync(loadStateTask, loadStateDispose).ConfigureAwait(false);
+            await waiter.WaitForEventAsync<WaitUntilState>(
+                this,
+                "LoadState",
+                e =>
+                {
+                    waiter.Log($"  \"{e}\" event fired");
+                    return e.ToValueString() == waitUntil.Value.ToValueString();
+                }).ConfigureAwait(false);
         }
 
         var request = navigatedEvent.NewDocument?.Request;
